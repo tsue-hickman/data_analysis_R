@@ -25,27 +25,37 @@ sample_info <- data.frame(row.names = sample_names, condition = groups)
 
 # demonstrate loop through cancer types
 cat("\nSample counts by cancer type:\n")
-for(cancer_type in levels(groups)) {
-  count <- sum(groups == cancer_type, na.rm=TRUE)
-  cat(cancer_type, ":", count, "samples\n")
+for (cancer_type in levels(groups)) {
+    count <- sum(groups == cancer_type, na.rm = TRUE)
+    cat(cancer_type, ":", count, "samples\n")
 }
 
 # clean up any weird values
 data[is.na(data)] <- 0
 data[data == Inf | data == -Inf] <- 0
 
-# heatmap 1 - top 50 variable genes
-top_genes <- order(rowVars(as.matrix(data)), decreasing = TRUE)[1:50]
-pheatmap(data[top_genes, ],
-    cluster_rows = TRUE,
-    show_rownames = TRUE,
-    cluster_cols = TRUE,
-    annotation_col = sample_info,
-    color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
-    main = "Top 50 Variable Genes",
-    filename = "heatmap_top_genes.png",
-    width = 10, height = 8
-)
+# Heatmap 1 - top 50 variable genes
+vars <- rowVars(as.matrix(data), na.rm = TRUE)
+vars <- vars[!is.na(vars) & vars > 0] # Remove NA or zero-variance rows
+if (length(vars) >= 2) { # Need at least 2 genes for clustering
+    top_genes <- order(vars, decreasing = TRUE)[1:min(50, length(vars))]
+    if (length(top_genes) >= 2) {
+        pheatmap(data[top_genes, ],
+            cluster_rows = TRUE,
+            show_rownames = TRUE,
+            cluster_cols = length(top_genes) >= 2, # Disable col clustering if not enough
+            annotation_col = sample_info,
+            color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
+            main = "Top 50 Variable Genes",
+            filename = "heatmap_top_genes.png",
+            width = 10, height = 8
+        )
+    } else {
+        print("Not enough variable genes for heatmap 1")
+    }
+} else {
+    print("Not enough valid genes for heatmap 1")
+}
 
 # heatmap 2 - high variance genes (top 5%)
 var_threshold <- quantile(rowVars(as.matrix(data)), 0.95, na.rm = TRUE)
