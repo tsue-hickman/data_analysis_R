@@ -6,11 +6,24 @@ library(RColorBrewer)
 library(genefilter)
 
 # read in the data
-data <- read.csv("data.csv", row.names = 1)
+# Updated to skip empty first column header (learned from zero-length name error)
+data <- read.csv("data.csv", row.names = 1, check.names = FALSE)
+# Check for valid gene and sample names
+if (any(is.na(rownames(data)) | rownames(data) == "")) {
+    stop("Empty or NA gene names in data.csv!")
+}
+if (any(is.na(colnames(data)) | colnames(data) == "")) {
+    stop("Empty or NA sample names in data.csv!")
+}
 
 # read sample info
-labels <- read.csv("labels.csv", row.names = 1)
+# Updated to skip empty first column header
+labels <- read.csv("labels.csv", row.names = 1, check.names = FALSE)
 colnames(labels) <- "condition"
+# Check for valid sample names
+if (any(is.na(rownames(labels)) | rownames(labels) == "")) {
+    stop("Empty or NA sample names in labels.csv!")
+}
 
 # make sure samples match up
 sample_names <- colnames(data)
@@ -19,8 +32,8 @@ if (!all(sample_names == rownames(labels))) {
     stop("Sample names don't match between files!")
 }
 
-# set up sample groups (5 cancer types)
-groups <- factor(labels$condition, levels = c("LUAD", "PRAD", "BRCA", "KIRC", "COAD"))
+# set up sample groups (removed COAD since 0 samples)
+groups <- factor(labels$condition, levels = c("LUAD", "PRAD", "BRCA", "KIRC"))
 sample_info <- data.frame(row.names = sample_names, condition = groups)
 
 # demonstrate loop through cancer types
@@ -87,3 +100,4 @@ if (length(high_var_genes) > 0) {
 } else {
     print("No high variance genes to save")
 }
+```
