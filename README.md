@@ -8,7 +8,7 @@ I wrote this to practice working with real-world datasets and to understand how 
 
 Note: I had to completely delete and restart my original repository because my initial data.csv file was 196MB and exceeded GitHub's file size limits. Lesson learned about working with sample data first!
 
-[Software Demo Video](http://youtube.link.goes.here)
+[Software Demo Video](https://youtu.be/al4cjmgPrxU)
 
 # Development Environment
 
