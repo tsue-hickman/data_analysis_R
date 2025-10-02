@@ -1,3 +1,4 @@
+```r
 # RNA-seq analysis for cancer types using normalized data
 # load stuff
 library(pheatmap)
@@ -6,7 +7,6 @@ library(genefilter)
 
 # read in the data
 data <- read.csv("data.csv", row.names = 1)
-head(data)
 
 # read sample info
 labels <- read.csv("labels.csv", row.names = 1)
@@ -34,13 +34,16 @@ for (cancer_type in levels(groups)) {
 data[is.na(data)] <- 0
 data[data == Inf | data == -Inf] <- 0
 
-# Heatmap 1 - top 50 variable genes
+# Added variance filter to avoid hclust errors from zero-variance rows (learned from crashes!)
 vars <- rowVars(as.matrix(data), na.rm = TRUE)
 vars <- vars[!is.na(vars) & vars > 0] # Remove NA or zero-variance rows
+data_filt <- data[names(vars), ] # Keep only valid genes for both heatmaps
+
+# Heatmap 1 - top 50 variable genes
 if (length(vars) >= 2) { # Need at least 2 genes for clustering
     top_genes <- order(vars, decreasing = TRUE)[1:min(50, length(vars))]
     if (length(top_genes) >= 2) {
-        pheatmap(data[top_genes, ],
+        pheatmap(data_filt[top_genes, ],
             cluster_rows = TRUE,
             show_rownames = TRUE,
             cluster_cols = length(top_genes) >= 2, # Disable col clustering if not enough
@@ -57,14 +60,15 @@ if (length(vars) >= 2) { # Need at least 2 genes for clustering
     print("Not enough valid genes for heatmap 1")
 }
 
-# heatmap 2 - high variance genes (top 5%)
-var_threshold <- quantile(rowVars(as.matrix(data)), 0.95, na.rm = TRUE)
-high_var_genes <- which(rowVars(as.matrix(data)) >= var_threshold)
-if (length(high_var_genes) > 0) {
-    pheatmap(data[high_var_genes, ],
+# Heatmap 2 - high variance genes (top 5%)
+# Updated to use filtered data (learned to reuse vars to avoid recomputing)
+var_threshold <- quantile(vars, 0.95, na.rm = TRUE)
+high_var_genes <- which(vars >= var_threshold)
+if (length(high_var_genes) >= 2) {
+    pheatmap(data_filt[high_var_genes, ],
         cluster_rows = TRUE,
         show_rownames = ifelse(length(high_var_genes) < 50, TRUE, FALSE),
-        cluster_cols = TRUE,
+        cluster_cols = length(high_var_genes) >= 2,
         annotation_col = sample_info,
         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
         main = "High Variance Genes",
@@ -72,9 +76,14 @@ if (length(high_var_genes) > 0) {
         width = 10, height = 8
     )
 } else {
-    print("No high variance genes found")
+    print("Not enough high variance genes for heatmap 2")
 }
 
 # saving the gene list
-high_var_gene_names <- rownames(data)[high_var_genes]
-write.csv(data.frame(Gene = high_var_gene_names), "high_variance_genes.csv", row.names = FALSE)
+# Updated to use filtered data (learned to match heatmap genes)
+if (length(high_var_genes) > 0) {
+    high_var_gene_names <- rownames(data_filt)[high_var_genes]
+    write.csv(data.frame(Gene = high_var_gene_names), "high_variance_genes.csv", row.names = FALSE)
+} else {
+    print("No high variance genes to save")
+}
